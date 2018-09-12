@@ -1,101 +1,92 @@
 import json
 import random
-syls = {}
-fileName = "dictionary.txt"
+import importlib
+import nltk.corpus as nc
 
-def Log(message):
+syllable_dict = {}
+FILE_NAME = "dictionary.txt"
+
+def output_message(message):
     print(message)
 
-def GenerateValidWords():
-
+def get_library_words(names):
     results = []
+    for name in names:
+        words_2d = [name.words(x) for x in name.fileids()]
+        results += [word for word_list in words_2d for word in word_list]
+    return tuple(set(results))
 
-     #create a list of reasonable words
-    from nltk.corpus import gutenberg
-    gresults = [gutenberg.words(x) for x in gutenberg.fileids()]
-    gresults = [j for sub in gresults for j in sub]
+def generate_valid_words():
 
-    results += gresults
-
-    from nltk.corpus import nps_chat
-    wresults = [nps_chat.words(x) for x in nps_chat.fileids()]
-    wresults = [j for sub in wresults for j in sub]    
-
-    results += wresults
-
-    from nltk.corpus import webtext
-    wresults = [webtext.words(x) for x in webtext.fileids()]
-    wresults = [j for sub in wresults for j in sub]
-
-    results += wresults
-    results = tuple(set(results))
-
+    results = get_library_words((
+        nc.brown,
+        nc.gutenberg, 
+        nc.nps_chat, 
+        nc.reuters,
+        nc.webtext))
     return results
 
-def createDictFile():
+def create_dict_file():
 
-    from nltk.corpus import cmudict    
-
-    validDict = GenerateValidWords()
-   
-    d = cmudict.dict()
+    validDict = generate_valid_words()   
+    cmudict = nc.cmudict.dict()
 
     def nsyl(word):
-        return [len(list(y for y in x if y[-1].isdigit())) for x in d[word.lower()]]     
+        return [len(list(y for y in x if y[-1].isdigit())) for x in cmudict[word.lower()]]     
 
     tempDict = {}
     for word in validDict:
-        if d.get(word) is not None:
+        if cmudict.get(word) is not None:
             tempDict[word] = nsyl(word)[0]
-    with open(fileName, "w") as f:
+    with open(FILE_NAME, "w") as f:
         r = json.dumps(tempDict)
         f.write(r)
 
-def loadDictionary():
-    global syls
+def load_dictionary():
+    global syllable_dict
+
     try:
-        with open(fileName, 'r') as f:
+        with open(FILE_NAME, 'r') as f:
             file = f.read().replace('\n', '')
-
     except IOError:
-        createDictFile()
-        with open(fileName, 'r') as f:
+        create_dict_file()
+        with open(FILE_NAME, 'r') as f:
             file = f.read().replace('\n', '')  
-    syls = json.loads(file)       
+    syllable_dict = json.loads(file)       
 
-def GetWords(number):
+def get_words(number):
     #work on this
-    return dict((key, value) for key, value in syls.iteritems() if value <= number )
+    return dict((key, value) for key, value in syllable_dict.items() if value <= number )
 
-def ChooseWords(number): 
+def choose_words(number): 
     s = []   
-    goodWords = GetWords(number)
-    choice = random.choice(goodWords.keys())
+    goodWords = get_words(number)
+    choice = random.choice(list(goodWords.keys()))
     result = (choice, goodWords[choice])
     s += [result[0]]
     if result[1] < number:
-        s += ChooseWords(number - result[1])
+        s += choose_words(number - result[1])
     random.shuffle(s)
     return s
 
-def ChooseLine(number):
-    elements = ChooseWords(number)
+def choose_line(number):
+    elements = choose_words(number)
     random.shuffle(elements)
     return '{}\n'.format(' '.join(elements))
 
-def WriteHaiku():
-    haiku = "{}{}{}".format(ChooseLine(5), ChooseLine(7), ChooseLine(5))
+def write_haiku():
+    haiku = "{}{}{}".format(choose_line(5), choose_line(7), choose_line(5))
     return haiku
 
-def WriteUndefined(syllabelCounts):
+def write_undefined(syllabelCounts):
     s = ''
     for i in syllabelCounts:
-        s += ChooseLine(i)
+        s += choose_line(i)
     return s
 
 def main():
-    loadDictionary()     
-    Log(WriteHaiku())
+    load_dictionary()     
+    output_message(write_haiku())
     
 main()
 
