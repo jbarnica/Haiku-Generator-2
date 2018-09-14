@@ -1,7 +1,7 @@
-import json
-import random
 import importlib
+import json
 import nltk.corpus as nc
+import random
 
 syllable_dict = {}
 FILE_NAME = "dictionary.txt"
@@ -84,9 +84,10 @@ def write_undefined(syllabelCounts):
         s += choose_line(i)
     return s
 
-def main():
-    load_dictionary()     
-    output_message(write_haiku())
-    
-main()
+def get_haiku():
+    return write_haiku()    
 
+load_dictionary()    
+
+if __name__ == "__main__":
+    output_message(get_haiku())
