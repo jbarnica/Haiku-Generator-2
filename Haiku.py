@@ -2,6 +2,7 @@ import importlib
 import json
 import nltk.corpus as nc
 import random
+import string
 
 syllable_dict = {}
 FILE_NAME = "dictionary.txt"
@@ -19,53 +20,61 @@ def get_library_words(names):
 def generate_valid_words():
 
     results = get_library_words((
-        nc.brown,
-        nc.gutenberg, 
-        nc.nps_chat, 
-        nc.reuters,
-        nc.webtext))
+        nc.brown, nc.gutenberg, nc.nps_chat, nc.reuters, nc.webtext))
     return results
 
-def create_dict_file():
+def strip_punctuation(phrase):
+    for i in list(string.punctuation):
+        phrase = phrase.replace(i, '')
+    return phrase
 
-    validDict = generate_valid_words()   
-    cmudict = nc.cmudict.dict()
+def nsyl(word, cmudict):
+        return [len(list(y for y in x if y[-1].isdigit())) for x in cmudict[word.lower()]]
 
-    def nsyl(word):
-        return [len(list(y for y in x if y[-1].isdigit())) for x in cmudict[word.lower()]]     
-
+def create_dict_file(phrase=None):
+    if phrase is None:
+        validDict = generate_valid_words()   
+    else:
+        validDict = list(set(strip_punctuation(phrase).split(' ')))
+    cmudict = nc.cmudict.dict()         
     tempDict = {}
     for word in validDict:
         if cmudict.get(word) is not None:
-            tempDict[word] = nsyl(word)[0]
-    with open(FILE_NAME, "w") as f:
-        r = json.dumps(tempDict)
-        f.write(r)
+            tempDict[word] = nsyl(word, cmudict)[0]
+    if phrase is None:
+        with open(FILE_NAME, "w") as f:
+            r = json.dumps(tempDict)
+            f.write(r)
+    else:
+        return tempDict    
 
-def load_dictionary():
+def load_dictionary(phrase=None):
     global syllable_dict
 
-    try:
-        with open(FILE_NAME, 'r') as f:
-            file = f.read().replace('\n', '')
-    except IOError:
-        create_dict_file()
-        with open(FILE_NAME, 'r') as f:
-            file = f.read().replace('\n', '')  
-    syllable_dict = json.loads(file)       
+    if phrase is not None:
+        syllable_dict = create_dict_file(phrase)
+    else:
+        try:
+            with open(FILE_NAME, 'r') as f:
+                file = f.read().replace('\n', '')
+        except IOError:
+            create_dict_file()
+            with open(FILE_NAME, 'r') as f:
+                file = f.read().replace('\n', '')  
+        syllable_dict = json.loads(file)       
 
-def get_words(number):
-    #work on this
-    return dict((key, value) for key, value in syllable_dict.items() if value <= number )
+def get_words(number, chosenWords):
+    return dict((key, value) for key, value in syllable_dict.items() 
+        if value <= number and value not in (chosenWords or []))
 
-def choose_words(number): 
+def choose_words(number, chosenWords = None): 
     s = []   
-    goodWords = get_words(number)
+    goodWords = get_words(number, chosenWords)
     choice = random.choice(list(goodWords.keys()))
     result = (choice, goodWords[choice])
     s += [result[0]]
     if result[1] < number:
-        s += choose_words(number - result[1])
+        s += choose_words(number - result[1], s)
     random.shuffle(s)
     return s
 
@@ -87,7 +96,11 @@ def write_undefined(syllabelCounts):
 def get_haiku():
     return write_haiku()    
 
-load_dictionary()    
+def haiku_from_tweet(tweet):
+    load_dictionary(tweet)
+    return get_haiku()    
 
 if __name__ == "__main__":
+    load_dictionary()    
     output_message(get_haiku())
+
