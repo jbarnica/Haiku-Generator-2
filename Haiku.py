@@ -28,8 +28,8 @@ def strip_punctuation(phrase):
         phrase = phrase.replace(i, '')
     return phrase.lower()
 
-def nsyl(word, cmudict):
-        return [len(list(y for y in x if y[-1].isdigit())) for x in cmudict[word.lower()]]
+def nsyl(word, cmudict):      
+    return [len(list(y for y in x if y[-1].isdigit())) for x in cmudict[word.lower()]]
 
 def create_dict_file(phrase=None):
     if phrase is None:
@@ -81,6 +81,14 @@ def choose_words(number, chosenWords = []):
         return s
     else:
         return ''
+
+def get_dict():
+    return nc.cmudict.dict()   
+
+def check_syllables(text, cmudict):    
+    if text is not None: 
+        return sum([nsyl(x, cmudict)[0] for x in text.split(' ') if cmudict.get(x.lower()) is not None])
+    return 0
 
 def choose_line(number):
     elements = choose_words(number)
