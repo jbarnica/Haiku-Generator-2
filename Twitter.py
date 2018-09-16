@@ -42,7 +42,7 @@ def strip_text(text):
 
 def copy_text(text):
     """Python string copying sucks"""
-    return ' '.join(text.split(" "))
+    return ' '.join(text.split(" "))     
 
 def create_Twitter_Line(model, num):
     corpus = Haiku.get_dict()
@@ -78,19 +78,44 @@ def create_Twitter_Line(model, num):
                     if Haiku.check_syllables(text, corpus) == num:
                         return text
                 text = text[text.index(' '):text.rindex(' ')]
-                text = strip_text(text)             
+                text = strip_text(text)   
+
+def create_Twitter_Poem(model, lines):    
+    start = 0
+    poem_return = []
+    corpus = Haiku.get_dict()
+    poem = create_Twitter_Line(model, sum(lines))
+    words = poem.split(' ')
+    for line in lines:
+        found = False        
+        for i in range(start, len(words)+1):
+            if not found:
+                potential_line = ' '.join(words[start:i])
+                num = Haiku.check_syllables(potential_line, corpus)
+                if num > line:
+                    return None
+                if num == line:
+                    poem_return.append(potential_line)
+                    start = i
+                    found = True
+
+    return '\n'.join(poem_return)
+
+
+def find_poem(model, lines):    
+    while True:
+        result = create_Twitter_Poem(model, lines)
+        if result:
+            return result
+                             
 
 def CreateTwitHu():
     api = setup()
     if api.VerifyCredentials():
         model = create_twitter_markov(api, TWITTER_HANDLE)
         for i in range(1, 100):
-            print("{}\n{}\n{}\n\n".format(
-                create_Twitter_Line(model, 5),
-                create_Twitter_Line(model, 7),
-                create_Twitter_Line(model, 5)
-                )
-            )
+            print('{}\n'.format(find_poem(model, (5,7,5))))
+            
 def CreateChains():
     with open("output.txt", 'a') as f:
         api = setup()
