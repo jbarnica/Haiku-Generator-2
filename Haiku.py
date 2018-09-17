@@ -3,9 +3,11 @@ import json
 import nltk.corpus as nc
 import random
 import string
+import re
 
 syllable_dict = {}
 FILE_NAME = "dictionary.txt"
+FORBIDDEN_LIST = ['and', 'the', 'a', 'its', 'of', 'on','to', 'in', 'is', 'our', 'that', 'by', 'are', 'so', 'for']
 
 def output_message(message):
     print(message)
@@ -94,6 +96,83 @@ def choose_line(number):
     elements = choose_words(number)
     random.shuffle(elements)
     return '{}\n'.format(' '.join(elements))
+
+def strip_text(text):
+    return re.sub("^\s+|\s+$", "", text, flags=re.UNICODE)
+
+def copy_text(text):
+    """Python string copying sucks"""
+    return ' '.join(text.split(" "))       
+
+def create_single_Line(model, num, corpus):
+    #gotta clean this all up....
+    while True:
+        originalText = model.make_sentence()
+        if originalText:
+            text = copy_text(originalText)
+            while text and ' ' in text and text !=  ' ':
+                if all([corpus.get(x.lower()) for x in text.split(' ')]):
+                    if check_syllables(text, corpus) == num:
+                        return text
+                text = text[:text.rindex(' ')]
+                text = strip_text(text)
+            text = copy_text(originalText)
+            while text and ' ' in text and text !=  ' ':
+                if all([corpus.get(x.lower()) for x in text.split(' ')]):
+                    if check_syllables(text, corpus) == num:
+                        return text
+                text = text[:text.rindex(' ')]
+                text = strip_text(text)
+            text = copy_text(originalText)
+            while text and ' ' in text and text !=  ' ':
+                if all([corpus.get(x.lower()) for x in text.split(' ')]):
+                    if check_syllables(text, corpus) == num:
+                        return text
+                text = text[text.index(' '):]
+                text = strip_text(text)
+            text = copy_text(originalText)
+            while text and ' ' in text and text !=  ' ':
+                if all([corpus.get(x.lower()) for x in text.split(' ')]):
+                    if check_syllables(text, corpus) == num:
+                        return text
+                text = text[text.index(' '):text.rindex(' ')]
+                text = strip_text(text)      
+
+def create_Poem(model, lines, corpus=None):    
+    start = 0
+    poem_return = []
+    if corpus is None:
+        corpus = get_dict()
+    poem = create_single_Line(model, sum(lines), corpus)
+    words = poem.split(' ')
+    for line in lines:
+        found = False        
+        for i in range(start, len(words)+1):
+            if not found:
+                potential_line = ' '.join(words[start:i])
+                num = check_syllables(potential_line, corpus)
+                if num > line:
+                    return None
+                if num == line:
+                    poem_return.append(potential_line)
+                    start = i
+                    found = True
+
+    return '\n'.join(poem_return)
+
+
+def find_poem(model, lines): 
+    corpus = get_dict()   
+    while True:
+        result = create_Poem(model, lines, corpus)
+        final_word_in_forbidden_list = False
+        if result:
+            words = result.split(' ')
+            if words:
+                final_word = words[-1]
+                final_word_in_forbidden_list = final_word in FORBIDDEN_LIST
+            if not final_word_in_forbidden_list:
+                return result    
 
 def write_haiku():
     haiku = '"{}{}{}"'.format(choose_line(5), choose_line(7), choose_line(5))
